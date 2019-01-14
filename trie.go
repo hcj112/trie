@@ -112,6 +112,60 @@ func (t *Trie) Keys() []string {
 	return t.PrefixSearch("")
 }
 
+func (t *Trie) Filter(key string) string {
+	runes := []rune(key)
+	found := []string{}
+	size := len(runes)
+	if size == 0 {
+		return key
+	}
+	var (
+		i, j, jj int
+		ok       bool
+	)
+	node := t.root
+	for i = 0; i < size; i++ {
+		if _, ok = node.children[runes[i]]; !ok {
+			continue
+		}
+
+		jj = 0
+		node = node.children[runes[i]]
+		for j = i + 1; j < size; j++ {
+			if _, ok = node.children[runes[j]]; !ok {
+				if jj > 0 {
+					found = t.replace(found, runes, i, jj)
+					i = jj
+				}
+				break
+			}
+
+			node = node.children[runes[j]]
+			if _, ok = node.children[0]; ok {
+				jj = j
+				if len(node.children) == 0 || j+1 == size {
+					found = t.replace(found, runes, i, j)
+					i = j
+					break
+				}
+			}
+		}
+		node = t.root
+	}
+
+	return string(runes)
+}
+
+// replace string to *
+func (t *Trie) replace(found []string, runes []rune, i, j int) []string {
+	run := runes[i : j+1]
+	found = append(found, string(run))
+	for k := i; k <= j; k++ {
+		runes[k] = 42
+	}
+	return found
+}
+
 // Performs a fuzzy search against the keys in the trie.
 func (t Trie) FuzzySearch(pre string) []string {
 	keys := fuzzycollect(t.Root(), []rune(pre))
